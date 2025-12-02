@@ -193,7 +193,7 @@
                         case 'high':
                             return { icon: 'ph ph-warning-circle text-red-400', bg: 'bg-red-800/20' };
                         case 'medium':
-                            return { icon: 'ph ph-exclamation text-yellow-400', bg: 'bg-yellow-800/20' };
+                            return { icon: 'ph ph-info text-yellow-400', bg: 'bg-yellow-800/20' };
                         case 'low':
                         case 'info':
                             return { icon: 'ph ph-info text-cyan-400', bg: 'bg-cyan-800/20' };
