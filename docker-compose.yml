@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: redflagui-app
+    restart: always
+    ports:
+      - "8083:80"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      API_BASE_URL: "http://192.168.6.123:7378"
+      APP_URL: http://localhost:8083
+    networks:
+      - shared_align_network
+
+networks:
+  shared_align_network:
+    external: true
+    name: shared_alignment_network
