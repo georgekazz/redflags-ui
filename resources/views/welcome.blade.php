@@ -72,10 +72,10 @@
 
     <main class="flex-1 container mx-auto px-6 pt-4" x-data="mainComponent()">
         <div class="flex space-x-4 border-b border-white/10 pb-2 mb-6">
-        <button @click="tab='raw-logs'"
+            <button @click="tab='raw-logs'"
                 :class="tab==='raw-logs' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
-                class="px-4 pb-2 border-b-2 font-semibold transition">Raw Logs</button>    
-        <button @click="tab='logs'" :class="tab==='logs' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
+                class="px-4 pb-2 border-b-2 font-semibold transition">Raw Logs</button>
+            <button @click="tab='logs'" :class="tab==='logs' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
                 class="px-4 pb-2 border-b-2 font-semibold transition">Incident Logs</button>
             <button @click="tab='analytics'"
                 :class="tab==='analytics' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
@@ -99,11 +99,11 @@
                     <select x-model="severity"
                         class="px-3 py-2 bg-white text-black rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400">
                         <option value="">All Severities</option>
-                        <option value="CRITICAL">CRITICAL</option>
-                        <option value="HIGH">HIGH</option>
-                        <option value="MEDIUM">MEDIUM</option>
-                        <option value="LOW">LOW</option>
-                        <option value="INFO">INFO</option>
+                        <option value="CRITICAL" style="color: #dc2626; font-weight: bold;">CRITICAL</option>
+                        <option value="HIGH" style="color: #ea580c; font-weight: bold;">HIGH</option>
+                        <option value="MEDIUM" style="color: #ca8a04; font-weight: bold;">MEDIUM</option>
+                        <option value="LOW" style="color: #2563eb; font-weight: bold;">LOW</option>
+                        <option value="INFO" style="color: #0891b2; font-weight: bold;">INFO</option>
                     </select>
 
                     <select x-model="log_type"
