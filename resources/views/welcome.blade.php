@@ -72,11 +72,11 @@
 
     <main class="flex-1 container mx-auto px-6 pt-4" x-data="mainComponent()">
         <div class="flex space-x-4 border-b border-white/10 pb-2 mb-6">
-            <button @click="tab='logs'" :class="tab==='logs' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
-                class="px-4 pb-2 border-b-2 font-semibold transition">Incident Logs</button>
-            <button @click="tab='raw-logs'"
+        <button @click="tab='raw-logs'"
                 :class="tab==='raw-logs' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
-                class="px-4 pb-2 border-b-2 font-semibold transition">Raw Logs</button>
+                class="px-4 pb-2 border-b-2 font-semibold transition">Raw Logs</button>    
+        <button @click="tab='logs'" :class="tab==='logs' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
+                class="px-4 pb-2 border-b-2 font-semibold transition">Incident Logs</button>
             <button @click="tab='analytics'"
                 :class="tab==='analytics' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
                 class="px-4 pb-2 border-b-2 font-semibold transition">Analytics</button>
@@ -153,8 +153,9 @@
             <div x-ref="logsContainer"
                 class="bg-white/5 backdrop-blur-lg rounded-xl shadow-xl p-6 h-[500px] overflow-y-auto border border-white/10">
                 <template x-for="log in filteredLogs()" :key="log.id">
-                    <div class="py-2 border-b border-white/10 flex flex-col md:flex-row md:items-center md:space-x-3"
-                        :class="[getLogStyle(log).bg, isNewLog(log) ? 'new-log' : '']">
+                    <div class="py-2 border-b border-white/10 flex flex-col md:flex-row md:items-center md:space-x-3 cursor-pointer hover:bg-white/5 transition"
+                        :class="[getLogStyle(log).bg, isNewLog(log) ? 'new-log' : '', selectedLog?.id === log.id ? 'ring-2 ring-cyan-400' : '']"
+                        @click="selectLog(log)">
                         <i :class="getLogStyle(log).icon" class="text-xl"></i>
                         <div class="flex-1">
                             <div class="flex items-center space-x-2">
@@ -163,9 +164,10 @@
                                     class="px-2 py-0.5 bg-cyan-500 text-white text-xs rounded-full">NEW</span>
                             </div>
                             <p class="text-white/50 text-sm mt-1 md:mt-0"
-                                x-text="`Source: ${log.source_host} | Severity: ${log.severity} | ${formatTime(log.timestamp)}`">
+                                x-text="`Source: ${log.source_host} | Severity: ${log.severity} | ${formatTime(log.event_timestamp)}`">
                             </p>
                         </div>
+                        <i class="ph ph-caret-right text-cyan-400 text-lg"></i>
                     </div>
                 </template>
 
@@ -174,6 +176,134 @@
                     <p>No logs found</p>
                 </div>
             </div>
+
+            <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
+                x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0"
+                x-transition:leave-end="translate-x-full"
+                class="fixed right-0 top-0 h-full w-full md:w-2/3 lg:w-1/2 bg-slate-900 shadow-2xl z-50 overflow-y-auto slide-in-right"
+                @click.away="closeSidebar()">
+
+                <div class="p-6 space-y-6">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                        <h2 class="text-2xl font-bold text-cyan-400">Incident Details</h2>
+                        <button @click="closeSidebar()" class="text-white/70 hover:text-white transition">
+                            <i class="ph ph-x text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <template x-if="selectedLog">
+                        <div class="space-y-6">
+                            <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                                <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">Basic
+                                    Information</h3>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-white/50">Incident ID:</span>
+                                        <span class="text-white font-mono" x-text="selectedLog.id"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-white/50">Created At:</span>
+                                        <span class="text-white" x-text="formatTime(selectedLog.created_at)"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-white/50">Event Timestamp:</span>
+                                        <span class="text-white"
+                                            x-text="formatTime(selectedLog.event_timestamp)"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                                <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">Log
+                                    Information</h3>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Log Type:</span>
+                                        <span
+                                            class="px-3 py-1 bg-blue-500/20 text-blue-300 text-sm rounded border border-blue-400"
+                                            x-text="selectedLog.log_type"></span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Source Host:</span>
+                                        <span
+                                            class="px-3 py-1 bg-purple-500/20 text-purple-300 text-sm rounded border border-purple-400"
+                                            x-text="selectedLog.source_host"></span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Severity:</span>
+                                        <span class="px-3 py-1 text-sm rounded border"
+                                            :class="getSeverityColor(selectedLog.severity)"
+                                            x-text="selectedLog.severity"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                                <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">Raw Log
+                                    Message</h3>
+                                <p class="text-white bg-black/30 p-3 rounded font-mono text-sm break-words"
+                                    x-text="selectedLog.raw_log_message"></p>
+                            </div>
+
+                            <template x-if="selectedLog.analysis_result">
+                                <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                                    <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">
+                                        Analysis Result</h3>
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-start">
+                                            <span class="text-white/50">Event Type:</span>
+                                            <span class="px-3 py-1 text-sm rounded border"
+                                                :class="getEventTypeColor(selectedLog.analysis_result.event_type)"
+                                                x-text="selectedLog.analysis_result.event_type || 'N/A'"></span>
+                                        </div>
+                                        <div>
+                                            <span class="text-white/50 block mb-2">Description:</span>
+                                            <p class="text-white bg-black/30 p-3 rounded text-sm"
+                                                x-text="selectedLog.analysis_result.description || 'No description available'">
+                                            </p>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-3 pt-3 border-t border-white/10">
+                                            <div>
+                                                <span class="text-white/50 text-xs block mb-1">Hostname:</span>
+                                                <span class="text-white text-sm"
+                                                    x-text="selectedLog.analysis_result.hostname || 'N/A'"></span>
+                                            </div>
+                                            <div>
+                                                <span class="text-white/50 text-xs block mb-1">Service:</span>
+                                                <span class="text-white text-sm"
+                                                    x-text="selectedLog.analysis_result.service || 'N/A'"></span>
+                                            </div>
+                                            <div>
+                                                <span class="text-white/50 text-xs block mb-1">User:</span>
+                                                <span class="text-white text-sm"
+                                                    x-text="selectedLog.analysis_result.user || 'N/A'"></span>
+                                            </div>
+                                            <div>
+                                                <span class="text-white/50 text-xs block mb-1">Source IP:</span>
+                                                <span class="text-white text-sm"
+                                                    x-text="selectedLog.analysis_result.source_ip || 'N/A'"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                                <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">Full JSON
+                                    Data</h3>
+                                <pre
+                                    class="bg-black/30 p-3 rounded text-xs text-green-300 font-mono overflow-x-auto max-h-64 overflow-y-auto"><code x-text="JSON.stringify(selectedLog, null, 2)"></code></pre>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0" @click="closeSidebar()" class="fixed inset-0 bg-black/50 z-40"></div>
         </section>
 
         <!-- RAW LOGS TAB -->
@@ -385,7 +515,13 @@
 
         document.addEventListener('alpine:init', () => {
             Alpine.data('mainComponent', () => ({
-                tab: 'logs'
+                tab: 'logs',
+                init() {
+                    this.$watch('tab', (value) => {
+                        window.currentTab = value;
+                    });
+                    window.currentTab = this.tab;
+                }
             }));
 
             Alpine.data('logsComponent', () => ({
@@ -400,6 +536,10 @@
                 lastUpdate: 'never',
                 newLogsCount: 0,
                 newLogIds: new Set(),
+                selectedLog: null,
+                sidebarOpen: false,
+                selectedLog: null,
+                sidebarOpen: false,
 
                 init() {
                     this.fetchLogs();
@@ -461,10 +601,10 @@
                         clearInterval(this.refreshInterval);
                     }
                     this.refreshInterval = setInterval(() => {
-                        if (this.autoRefresh && this.tab === 'logs') {
+                        if (this.autoRefresh && window.currentTab === 'logs') {
                             this.fetchLogs();
                         }
-                    }, 5000); // Refresh every 5 seconds
+                    }, 5000);
                 },
 
                 toggleAutoRefresh() {
@@ -487,6 +627,96 @@
                 scrollToTop() {
                     this.$refs.logsContainer.scrollTop = 0;
                     this.newLogsCount = 0;
+                },
+
+                selectLog(log) {
+                    this.selectedLog = log;
+                    this.sidebarOpen = true;
+                },
+
+                closeSidebar() {
+                    this.sidebarOpen = false;
+                    setTimeout(() => {
+                        this.selectedLog = null;
+                    }, 300);
+                },
+
+                getSeverityColor(severity) {
+                    switch ((severity || '').toLowerCase()) {
+                        case 'critical':
+                            return 'bg-red-500/20 text-red-300 border-red-400';
+                        case 'high':
+                            return 'bg-orange-500/20 text-orange-300 border-orange-400';
+                        case 'medium':
+                            return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
+                        case 'low':
+                            return 'bg-blue-500/20 text-blue-300 border-blue-400';
+                        case 'info':
+                            return 'bg-cyan-500/20 text-cyan-300 border-cyan-400';
+                        default:
+                            return 'bg-gray-500/20 text-gray-300 border-gray-400';
+                    }
+                },
+
+                getEventTypeColor(eventType) {
+                    switch ((eventType || '').toLowerCase()) {
+                        case 'normal':
+                            return 'bg-green-500/20 text-green-300 border-green-400';
+                        case 'system_error':
+                        case 'error':
+                            return 'bg-red-500/20 text-red-300 border-red-400';
+                        case 'warning':
+                            return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
+                        case 'anomaly':
+                            return 'bg-purple-500/20 text-purple-300 border-purple-400';
+                        default:
+                            return 'bg-blue-500/20 text-blue-300 border-blue-400';
+                    }
+                },
+
+                selectLog(log) {
+                    this.selectedLog = log;
+                    this.sidebarOpen = true;
+                },
+
+                closeSidebar() {
+                    this.sidebarOpen = false;
+                    setTimeout(() => {
+                        this.selectedLog = null;
+                    }, 300);
+                },
+
+                getSeverityColor(severity) {
+                    switch ((severity || '').toLowerCase()) {
+                        case 'critical':
+                            return 'bg-red-500/20 text-red-300 border-red-400';
+                        case 'high':
+                            return 'bg-orange-500/20 text-orange-300 border-orange-400';
+                        case 'medium':
+                            return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
+                        case 'low':
+                            return 'bg-blue-500/20 text-blue-300 border-blue-400';
+                        case 'info':
+                            return 'bg-cyan-500/20 text-cyan-300 border-cyan-400';
+                        default:
+                            return 'bg-gray-500/20 text-gray-300 border-gray-400';
+                    }
+                },
+
+                getEventTypeColor(eventType) {
+                    switch ((eventType || '').toLowerCase()) {
+                        case 'normal':
+                            return 'bg-green-500/20 text-green-300 border-green-400';
+                        case 'system_error':
+                        case 'error':
+                            return 'bg-red-500/20 text-red-300 border-red-400';
+                        case 'warning':
+                            return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
+                        case 'anomaly':
+                            return 'bg-purple-500/20 text-purple-300 border-purple-400';
+                        default:
+                            return 'bg-blue-500/20 text-blue-300 border-blue-400';
+                    }
                 },
 
                 formatTime(timestamp) {
