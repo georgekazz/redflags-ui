@@ -42,6 +42,18 @@
                 opacity: 0.5;
             }
         }
+
+        .log-row {
+            transition: all 0.2s ease;
+        }
+
+        .log-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .log-expanded {
+            background: rgba(34, 211, 238, 0.1);
+        }
     </style>
 </head>
 
@@ -58,17 +70,20 @@
         </nav>
     </header>
 
-    <main class="flex-1 container mx-auto px-6 pt-4" x-data="logsComponent()">
+    <main class="flex-1 container mx-auto px-6 pt-4" x-data="mainComponent()">
         <div class="flex space-x-4 border-b border-white/10 pb-2 mb-6">
             <button @click="tab='logs'" :class="tab==='logs' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
-                class="px-4 pb-2 border-b-2 font-semibold transition">Logs</button>
+                class="px-4 pb-2 border-b-2 font-semibold transition">Incident Logs</button>
+            <button @click="tab='raw-logs'"
+                :class="tab==='raw-logs' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
+                class="px-4 pb-2 border-b-2 font-semibold transition">Raw Logs</button>
             <button @click="tab='analytics'"
                 :class="tab==='analytics' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
                 class="px-4 pb-2 border-b-2 font-semibold transition">Analytics</button>
         </div>
 
-        <!-- LOGS TAB -->
-        <section x-show="tab==='logs'" class="space-y-6">
+        <!-- INCIDENT LOGS TAB -->
+        <section x-show="tab==='logs'" class="space-y-6" x-data="logsComponent()">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4 flex-wrap gap-2">
                     <input type="text" x-model="search" placeholder="Search logs..."
@@ -108,7 +123,6 @@
                     </button>
                 </div>
 
-                <!-- Real-time Status -->
                 <div class="flex items-center space-x-3">
                     <div class="flex items-center space-x-2">
                         <div :class="autoRefresh ? 'bg-green-500' : 'bg-gray-500'"
@@ -124,7 +138,6 @@
                 </div>
             </div>
 
-            <!-- Logs Notification -->
             <div x-show="newLogsCount > 0"
                 class="bg-cyan-500/20 border border-cyan-400 rounded-lg p-3 flex items-center justify-between">
                 <div class="flex items-center space-x-2">
@@ -137,7 +150,6 @@
                 </button>
             </div>
 
-            <!-- Logs Panel -->
             <div x-ref="logsContainer"
                 class="bg-white/5 backdrop-blur-lg rounded-xl shadow-xl p-6 h-[500px] overflow-y-auto border border-white/10">
                 <template x-for="log in filteredLogs()" :key="log.id">
@@ -160,6 +172,156 @@
                 <div x-show="filteredLogs().length === 0" class="text-center text-white/50 py-8">
                     <i class="ph ph-magnifying-glass text-4xl mb-2"></i>
                     <p>No logs found</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- RAW LOGS TAB -->
+        <section x-show="tab==='raw-logs'" class="space-y-6" x-data="rawLogsComponent()">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1 space-y-4">
+                    <div class="bg-white/5 backdrop-blur-lg rounded-xl shadow-xl p-6 border border-white/10 space-y-4">
+                        <h3 class="text-xl font-bold text-cyan-400 mb-4">Filters</h3>
+
+                        <div>
+                            <label class="block text-sm font-medium text-white/70 mb-2">Number of recent logs</label>
+                            <select x-model="n"
+                                class="w-full px-3 py-2 bg-white text-black rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                                <option value="500">500</option>
+                                <option value="1000">1000</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-white/70 mb-2">Log Type</label>
+                            <select x-model="logType"
+                                class="w-full px-3 py-2 bg-white text-black rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                                <option value="">All Types</option>
+                                <option value="system">System Logs</option>
+                                <option value="web">Web Logs</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-white/70 mb-2">Source Host</label>
+                            <select x-model="sourceHost"
+                                class="w-full px-3 py-2 bg-white text-black rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                                <option value="">All Hosts</option>
+                                <template x-for="host in availableHosts" :key="host">
+                                    <option :value="host" x-text="host"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <button @click="fetchRawLogs()" :disabled="loading"
+                            class="w-full px-4 py-2 bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-500 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition">
+                            <i :class="loading ? 'ph ph-spinner animate-spin' : 'ph ph-funnel'" class="mr-2"></i>
+                            <span x-text="loading ? 'Loading...' : 'Apply Filters'"></span>
+                        </button>
+
+                        <button @click="exportToJSON()" :disabled="rawLogs.length === 0"
+                            class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-500 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition">
+                            <i class="ph ph-download-simple mr-2"></i>Export JSON
+                        </button>
+
+                        <div class="pt-4 border-t border-white/10">
+                            <p class="text-sm text-white/50">Logs loaded: <span class="text-cyan-400 font-bold"
+                                    x-text="rawLogs.length"></span></p>
+                            <p class="text-sm text-white/50 mt-1">Last updated: <span class="text-white/70"
+                                    x-text="lastUpdated"></span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main content area -->
+                <div class="lg:col-span-3">
+                    <div class="bg-white/5 backdrop-blur-lg rounded-xl shadow-xl p-6 border border-white/10">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold text-white">Raw Log Messages</h3>
+                            <div class="flex items-center space-x-2">
+                                <button @click="viewMode = 'table'"
+                                    :class="viewMode === 'table' ? 'bg-cyan-500' : 'bg-white/10'"
+                                    class="px-3 py-1 rounded-lg transition">
+                                    <i class="ph ph-table"></i>
+                                </button>
+                                <button @click="viewMode = 'json'"
+                                    :class="viewMode === 'json' ? 'bg-cyan-500' : 'bg-white/10'"
+                                    class="px-3 py-1 rounded-lg transition">
+                                    <i class="ph ph-code"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div x-show="viewMode === 'table'" class="h-[600px] overflow-y-auto">
+                            <div x-show="error" class="bg-red-500/20 border border-red-400 rounded-lg p-4 mb-4">
+                                <div class="flex items-center space-x-2">
+                                    <i class="ph ph-warning-circle text-red-400 text-xl"></i>
+                                    <span class="text-red-300" x-text="error"></span>
+                                </div>
+                            </div>
+
+                            <div x-show="loading" class="text-center text-white/50 py-12">
+                                <i class="ph ph-spinner text-5xl mb-3 animate-spin"></i>
+                                <p class="text-lg">Loading logs...</p>
+                            </div>
+
+                            <div x-show="!loading">
+                                <template x-for="(log, index) in rawLogs" :key="index">
+                                    <div class="log-row border-b border-white/10 py-3 cursor-pointer"
+                                        :class="expandedLog === index ? 'log-expanded' : ''"
+                                        @click="toggleExpand(index)">
+                                        <div class="flex items-start space-x-3">
+                                            <i :class="expandedLog === index ? 'ph-caret-down' : 'ph-caret-right'"
+                                                class="ph text-cyan-400 text-lg mt-1"></i>
+                                            <div class="flex-1">
+                                                <p class="text-white font-medium" x-text="log.message"></p>
+
+                                                <div x-show="expandedLog === index" x-transition
+                                                    class="mt-3 space-y-2 pl-4 border-l-2 border-cyan-400">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span
+                                                            class="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded">
+                                                            <i class="ph ph-tag mr-1"></i><span
+                                                                x-text="log.log_type"></span>
+                                                        </span>
+                                                        <span
+                                                            class="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">
+                                                            <i class="ph ph-hard-drives mr-1"></i><span
+                                                                x-text="log.source_host"></span>
+                                                        </span>
+                                                    </div>
+                                                    <p class="text-white/50 text-sm">
+                                                        <i class="ph ph-file-text mr-1"></i>
+                                                        <span x-text="log.file_path"></span>
+                                                    </p>
+                                                    <p class="text-white/50 text-sm">
+                                                        <i class="ph ph-clock mr-1"></i>
+                                                        <span x-text="formatTime(log.timestamp)"></span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <div x-show="rawLogs.length === 0 && !loading && !error"
+                                    class="text-center text-white/50 py-12">
+                                    <i class="ph ph-database text-5xl mb-3"></i>
+                                    <p class="text-lg">No logs loaded</p>
+                                    <p class="text-sm mt-2">Apply filters to fetch raw logs</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div x-show="viewMode === 'json'" class="h-[600px] overflow-y-auto">
+                            <pre
+                                class="bg-black/30 p-4 rounded-lg text-sm text-green-300 font-mono"><code x-text="JSON.stringify(getJSONExport(), null, 2)"></code></pre>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -214,9 +376,6 @@
         <p class="text-white/70">© <span id="year"></span> Red Flags Dashboard</p>
         <div class="flex items-center space-x-4">
             <img src="./img/ihu-logo-white.svg" alt="Logo 2" class="w-24 h-24">
-            <!-- <img src="./img/logo-secureu-white.svg" alt="Logo 1" class="w-24 h-24"> -->
-            <!-- <img src="./img/intersoc.svg" alt="Logo 2" class="w-24 h-24">
-            <img src="./img/cyberguard.png" alt="Logo 2" class="w-42 h-12"> -->
         </div>
     </footer>
 
@@ -225,8 +384,11 @@
         document.getElementById('year').textContent = new Date().getFullYear();
 
         document.addEventListener('alpine:init', () => {
+            Alpine.data('mainComponent', () => ({
+                tab: 'logs'
+            }));
+
             Alpine.data('logsComponent', () => ({
-                tab: 'logs',
                 logs: [],
                 search: '',
                 severity: '',
@@ -238,11 +400,18 @@
                 lastUpdate: 'never',
                 newLogsCount: 0,
                 newLogIds: new Set(),
-                previousLogIds: new Set(),
 
                 init() {
                     this.fetchLogs();
                     this.startAutoRefresh();
+
+                    this.$watch('$el', () => {
+                        return () => {
+                            if (this.refreshInterval) {
+                                clearInterval(this.refreshInterval);
+                            }
+                        };
+                    });
                 },
 
                 async fetchLogs() {
@@ -256,7 +425,6 @@
                         const data = await res.json();
                         const newLogs = data.incidents || [];
 
-                        // Detect new logs
                         if (this.logs.length > 0) {
                             const currentIds = new Set(this.logs.map(l => l.id));
                             this.newLogIds = new Set();
@@ -346,10 +514,90 @@
                     }
                 }
             }));
-        });
-    </script>
-    <script>
-        document.addEventListener('alpine:init', () => {
+
+            Alpine.data('rawLogsComponent', () => ({
+                rawLogs: [],
+                n: 100,
+                logType: '',
+                sourceHost: '',
+                availableHosts: [],
+                expandedLog: null,
+                viewMode: 'table',
+                lastUpdated: 'never',
+                loading: false,
+                error: null,
+
+                init() {
+                    this.fetchHostsStats();
+                },
+
+                async fetchHostsStats() {
+                    try {
+                        const res = await fetch(`${window.apiBaseUrl}/raw-logs/stats?x_api_key=-`);
+                        const data = await res.json();
+                        this.availableHosts = data.hosts || [];
+                    } catch (e) {
+                        console.error("Failed to fetch hosts stats:", e);
+                    }
+                },
+
+                async fetchRawLogs() {
+                    try {
+                        let url = `${window.apiBaseUrl}/raw-logs/recent?n=${this.n}&x_api_key=-`;
+                        if (this.logType) url += `&log_type=${this.logType}`;
+                        if (this.sourceHost) url += `&source_host=${this.sourceHost}`;
+
+                        const res = await fetch(url);
+                        const data = await res.json();
+
+                        this.rawLogs = (data.logs || []).map(item => ({
+                            message: item.message || '',
+                            log_type: item.fields?.log_type || 'N/A',
+                            source_host: item.fields?.source_host || 'N/A',
+                            file_path: item.log?.file?.path || 'N/A',
+                            timestamp: item['@timestamp'] || ''
+                        }));
+
+                        this.lastUpdated = new Date().toLocaleTimeString();
+                        this.expandedLog = null;
+                    } catch (e) {
+                        console.error("Failed to fetch raw logs:", e);
+                    }
+                },
+
+                toggleExpand(index) {
+                    this.expandedLog = this.expandedLog === index ? null : index;
+                },
+
+                formatTime(timestamp) {
+                    if (!timestamp) return '';
+                    const date = new Date(timestamp);
+                    return date.toLocaleString();
+                },
+
+                getJSONExport() {
+                    return this.rawLogs.map(log => ({
+                        "Message": log.message,
+                        "Log type": log.log_type,
+                        "Source Host": log.source_host,
+                        "Collection time": log.timestamp
+                    }));
+                },
+
+                exportToJSON() {
+                    const exportData = this.getJSONExport();
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `raw-logs-export-${new Date().toISOString()}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
+            }));
+
             Alpine.data('analyticsComponent', () => ({
                 stats: {},
                 async fetchStats() {
