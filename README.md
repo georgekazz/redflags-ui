@@ -1,5 +1,5 @@
 # Red Flags Dashboard
-![redflagmain](https://github.com/user-attachments/assets/04a92f8b-69dd-4a29-a8d7-4be36ceae631)
+<img width="3788" height="1829" alt="Screenshot 2026-01-22 110745" src="https://github.com/user-attachments/assets/e4478985-91ad-4dd1-9a4a-9ddb31f95b64" />
 
 
 **Red Flags** είναι ένα μοντέρνο **Security Incident Dashboard** που εμφανίζει logs και στατιστικά από το API σας, με δυνατότητα φιλτραρίσματος, real-time ενημέρωσης και όμορφη απεικόνιση των δεδομένων. Το frontend είναι φτιαγμένο με **TailwindCSS** και **Alpine.js**, ενώ το backend API με **FastAPI**.
@@ -7,9 +7,9 @@
 ---
 
 ## Screenshot
-![logsreflag](https://github.com/user-attachments/assets/ccb14b47-aca2-42aa-be2b-29e1bf16b3ba)
+<img width="3055" height="1882" alt="Screenshot 2026-01-22 110758" src="https://github.com/user-attachments/assets/42a4e4ee-7d25-4b12-915f-5cfddd75463a" />
 
-![redflags-analytics](https://github.com/user-attachments/assets/8c80d004-5115-4208-afe3-e201cb692ba5)
+<img width="3748" height="1321" alt="Screenshot 2026-01-22 110815" src="https://github.com/user-attachments/assets/61405d20-9e9f-47a0-817b-b53319be113a" />
 
 ---
 
