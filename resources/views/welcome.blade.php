@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="icon" type="image/svg+xml" href="./img/logo.svg">
     <style>
         @keyframes slideIn {
@@ -54,6 +55,16 @@
         .log-expanded {
             background: rgba(34, 211, 238, 0.1);
         }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 
@@ -74,9 +85,9 @@
         <div class="flex space-x-4 border-b border-white/10 pb-2 mb-6">
             <button @click="tab='raw-logs'"
                 :class="tab==='raw-logs' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
-                class="px-4 pb-2 border-b-2 font-semibold transition">Raw Logs</button>
+                class="px-4 pb-2 border-b-2 font-semibold transition">Pre-analysis Logs</button>
             <button @click="tab='logs'" :class="tab==='logs' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
-                class="px-4 pb-2 border-b-2 font-semibold transition">Incident Logs</button>
+                class="px-4 pb-2 border-b-2 font-semibold transition">Analyzed Logs</button>
             <button @click="tab='analytics'"
                 :class="tab==='analytics' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
                 class="px-4 pb-2 border-b-2 font-semibold transition">Analytics</button>
@@ -99,11 +110,11 @@
                     <select x-model="severity"
                         class="px-3 py-2 bg-white text-black rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400">
                         <option value="">All Severities</option>
-                        <option value="CRITICAL" style="color: #dc2626; font-weight: bold;">CRITICAL</option>
-                        <option value="HIGH" style="color: #ea580c; font-weight: bold;">HIGH</option>
-                        <option value="MEDIUM" style="color: #ca8a04; font-weight: bold;">MEDIUM</option>
-                        <option value="LOW" style="color: #2563eb; font-weight: bold;">LOW</option>
-                        <option value="INFO" style="color: #0891b2; font-weight: bold;">INFO</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="LOW">LOW</option>
+                        <option value="INFO">INFO</option>
                     </select>
 
                     <select x-model="log_type"
@@ -177,11 +188,12 @@
                 </div>
             </div>
 
+            <!-- Sidebar for incident details -->
             <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300"
                 x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
                 x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0"
                 x-transition:leave-end="translate-x-full"
-                class="fixed right-0 top-0 h-full w-full md:w-2/3 lg:w-1/2 bg-slate-900 shadow-2xl z-50 overflow-y-auto slide-in-right"
+                class="fixed right-0 top-0 h-full w-full md:w-2/3 lg:w-1/2 bg-slate-900 shadow-2xl z-50 overflow-y-auto"
                 @click.away="closeSidebar()">
 
                 <div class="p-6 space-y-6">
@@ -300,6 +312,7 @@
                 </div>
             </div>
 
+            <!-- Overlay -->
             <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300"
                 x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                 x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
@@ -367,7 +380,6 @@
                     </div>
                 </div>
 
-                <!-- Main content area -->
                 <div class="lg:col-span-3">
                     <div class="bg-white/5 backdrop-blur-lg rounded-xl shadow-xl p-6 border border-white/10">
                         <div class="flex items-center justify-between mb-4">
@@ -457,50 +469,184 @@
         </section>
 
         <!-- ANALYTICS TAB -->
-        <section x-show="tab==='analytics'" class="animate-fade-in space-y-6" x-data="analyticsComponent()">
+        <section x-show="tab==='analytics'" class="space-y-6" x-data="analyticsComponent()">
+            <div class="bg-white/5 p-4 rounded-xl border border-white/10">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center space-x-4">
+                        <label class="text-white font-semibold">Time Range:</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="number" x-model.number="timeRange" min="1" :max="maxTimeRange"
+                                class="px-3 py-2 bg-white/10 text-white rounded-lg w-24 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                placeholder="Hours" />
+                            <span class="text-white/70">hours</span>
+                        </div>
+                        <span class="text-cyan-400 font-medium" x-text="`(${timeRangeLabel})`"></span>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <span class="text-white/50 text-sm mr-2">Quick select:</span>
+                        <button @click="timeRange = 24" :class="timeRange === 24 ? 'bg-cyan-500' : 'bg-white/10'"
+                            class="px-3 py-1 rounded-lg text-sm transition hover:bg-cyan-600">
+                            24h
+                        </button>
+                        <button @click="timeRange = 168" :class="timeRange === 168 ? 'bg-cyan-500' : 'bg-white/10'"
+                            class="px-3 py-1 rounded-lg text-sm transition hover:bg-cyan-600">
+                            7d
+                        </button>
+                        <button @click="timeRange = 720" :class="timeRange === 720 ? 'bg-cyan-500' : 'bg-white/10'"
+                            class="px-3 py-1 rounded-lg text-sm transition hover:bg-cyan-600">
+                            30d
+                        </button>
+                        <button @click="timeRange = 8760" :class="timeRange === 8760 ? 'bg-cyan-500' : 'bg-white/10'"
+                            class="px-3 py-1 rounded-lg text-sm transition hover:bg-cyan-600">
+                            1y
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow">
-                    <h3 class="text-lg font-semibold mb-3">Total Incidents</h3>
-                    <p class="text-4xl font-bold text-cyan-400" x-text="stats.total_incidents || 0"></p>
+                <div
+                    class="bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 p-6 rounded-xl border border-cyan-400/30 shadow-lg hover:shadow-xl transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-white/70 uppercase tracking-wide">Total Incidents</h3>
+                        <i class="ph ph-database text-cyan-400 text-2xl"></i>
+                    </div>
+                    <p class="text-4xl font-bold text-cyan-400" x-text="allTimeStats.total_incidents || 0"></p>
+                    <p class="text-xs text-white/50 mt-2">Last year (8760 hours)</p>
                 </div>
-                <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow">
-                    <h3 class="text-lg font-semibold mb-3">Incidents Last 24h</h3>
-                    <p class="text-4xl font-bold text-red-400" x-text="stats.last_24h || 0"></p>
+
+                <div
+                    class="bg-gradient-to-br from-red-500/20 to-red-600/10 p-6 rounded-xl border border-red-400/30 shadow-lg hover:shadow-xl transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-white/70 uppercase tracking-wide">
+                            Incidents Last <span x-text="timeRangeLabel"></span>
+                        </h3>
+                        <i class="ph ph-warning-circle text-red-400 text-2xl"></i>
+                    </div>
+                    <p class="text-4xl font-bold text-red-400" x-text="stats.total_incidents || 0"></p>
+                    <p class="text-xs text-white/50 mt-2">In selected time range</p>
                 </div>
-                <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow">
-                    <h3 class="text-lg font-semibold mb-3">Top Source Host</h3>
-                    <p class="text-2xl font-bold text-yellow-300" x-text="stats.top_source_hosts?.[0]?.host || '-'"></p>
-                    <p class="text-sm text-white/50" x-text="`Count: ${stats.top_source_hosts?.[0]?.count || 0}`"></p>
+
+                <div
+                    class="bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 p-6 rounded-xl border border-yellow-400/30 shadow-lg hover:shadow-xl transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-white/70 uppercase tracking-wide">Top Source Host</h3>
+                        <i class="ph ph-hard-drives text-yellow-400 text-2xl"></i>
+                    </div>
+                    <p class="text-2xl font-bold text-yellow-300 truncate"
+                        x-text="stats.top_source_hosts?.[0]?.host || '-'"></p>
+                    <p class="text-xs text-white/50 mt-2">
+                        Count: <span x-text="stats.top_source_hosts?.[0]?.count || 0"></span>
+                        <span class="text-white/30 mx-1">|</span>
+                        Last <span x-text="timeRangeLabel"></span>
+                    </p>
                 </div>
             </div>
 
-            <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow">
-                <h3 class="text-lg font-semibold mb-4">Incidents by Severity</h3>
-                <ul class="space-y-2">
-                    <template x-for="(count, severity) in stats.by_severity" :key="severity">
-                        <li class="flex justify-between">
-                            <span x-text="severity"></span>
-                            <span x-text="count"></span>
-                        </li>
-                    </template>
-                </ul>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow-lg">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="ph ph-chart-bar text-cyan-400 mr-2"></i>
+                        Incidents by Severity
+                        <span class="text-sm text-white/50 ml-2" x-text="`(Last ${timeRangeLabel})`"></span>
+                    </h3>
+                    <div class="h-64">
+                        <canvas x-ref="severityChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow-lg">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="ph ph-chart-pie text-cyan-400 mr-2"></i>
+                        Incidents by Log Type
+                        <span class="text-sm text-white/50 ml-2" x-text="`(Last ${timeRangeLabel})`"></span>
+                    </h3>
+                    <div class="h-64">
+                        <canvas x-ref="logTypeChart"></canvas>
+                    </div>
+                </div>
             </div>
 
-            <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow">
-                <h3 class="text-lg font-semibold mb-4">Incidents by Log Type</h3>
-                <ul class="space-y-2">
-                    <template x-for="(count, logType) in stats.by_log_type" :key="logType">
-                        <li class="flex justify-between">
-                            <span x-text="logType"></span>
-                            <span x-text="count"></span>
-                        </li>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow-lg">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="ph ph-list-bullets text-cyan-400 mr-2"></i>
+                            Severity Breakdown
+                        </div>
+                        <span class="text-sm text-white/50" x-text="`Last ${timeRangeLabel}`"></span>
+                    </h3>
+                    <ul class="space-y-3">
+                        <template x-for="(count, severity) in stats.by_severity" :key="severity">
+                            <li class="flex justify-between items-center p-3 rounded-lg hover:bg-white/5 transition"
+                                :class="getSeverityBgClass(severity)">
+                                <div class="flex items-center space-x-3">
+                                    <i :class="getSeverityIcon(severity)" class="text-xl"></i>
+                                    <span class="font-medium" x-text="severity"></span>
+                                </div>
+                                <span class="font-bold text-lg" x-text="count"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+
+                <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow-lg">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="ph ph-files text-cyan-400 mr-2"></i>
+                            Log Type Breakdown
+                        </div>
+                        <span class="text-sm text-white/50" x-text="`Last ${timeRangeLabel}`"></span>
+                    </h3>
+                    <ul class="space-y-3">
+                        <template x-for="(count, logType) in stats.by_log_type" :key="logType">
+                            <li
+                                class="flex justify-between items-center p-3 rounded-lg bg-blue-500/10 border border-blue-400/20 hover:bg-blue-500/20 transition">
+                                <div class="flex items-center space-x-3">
+                                    <i class="ph ph-file-code text-blue-400 text-xl"></i>
+                                    <span class="font-medium capitalize" x-text="logType"></span>
+                                </div>
+                                <span class="font-bold text-lg text-blue-300" x-text="count"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow-lg">
+                <h3 class="text-lg font-semibold mb-4 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="ph ph-ranking text-cyan-400 mr-2"></i>
+                        Top Source Hosts
+                    </div>
+                    <span class="text-sm text-white/50" x-text="`Last ${timeRangeLabel}`"></span>
+                </h3>
+                <div class="space-y-3">
+                    <template x-for="(host, index) in stats.top_source_hosts?.slice(0, 10)" :key="host.host">
+                        <div class="flex items-center space-x-4">
+                            <div
+                                class="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-400">
+                                <span class="text-sm font-bold text-cyan-300" x-text="index + 1"></span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-white font-medium" x-text="host.host"></span>
+                                    <span class="text-white/70 text-sm" x-text="host.count + ' incidents'"></span>
+                                </div>
+                                <div class="w-full bg-white/10 rounded-full h-2">
+                                    <div class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full transition-all duration-500"
+                                        :style="`width: ${(host.count / (stats.top_source_hosts[0]?.count || 1)) * 100}%`">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </template>
-                </ul>
+                </div>
             </div>
         </section>
     </main>
 
-    <!-- FOOTER -->
     <footer
         class="bg-white/5 dark:bg-gray-800 mt-10 py-6 border-t border-white/10 flex justify-between items-center px-6 rounded-t-xl">
         <p class="text-white/70">© <span id="year"></span> Red Flags Dashboard</p>
@@ -538,12 +684,16 @@
                 newLogIds: new Set(),
                 selectedLog: null,
                 sidebarOpen: false,
-                selectedLog: null,
-                sidebarOpen: false,
 
                 init() {
+                    console.log('Logs component initialized');
                     this.fetchLogs();
                     this.startAutoRefresh();
+
+                    this.$watch('limit', () => {
+                        console.log('Limit changed to:', this.limit);
+                        this.applyFilters();
+                    });
 
                     this.$watch('$el', () => {
                         return () => {
@@ -561,28 +711,36 @@
                         if (this.log_type) url += `&log_type=${this.log_type}`;
                         if (this.hours) url += `&hours=${this.hours}`;
 
+                        console.log('Fetching logs from:', url);
                         const res = await fetch(url);
                         const data = await res.json();
                         const newLogs = data.incidents || [];
 
+                        console.log('API returned', newLogs.length, 'logs');
+
                         if (this.logs.length > 0) {
                             const currentIds = new Set(this.logs.map(l => l.id));
-                            this.newLogIds = new Set();
-                            this.newLogsCount = 0;
+                            const tempNewIds = new Set();
+                            let count = 0;
 
                             newLogs.forEach(log => {
                                 if (!currentIds.has(log.id)) {
-                                    this.newLogIds.add(log.id);
-                                    this.newLogsCount++;
+                                    tempNewIds.add(log.id);
+                                    count++;
                                 }
                             });
+
+                            this.newLogIds = tempNewIds;
+                            this.newLogsCount = count;
+                            console.log('Found', count, 'new logs');
                         }
 
-                        this.logs = newLogs;
+                        this.logs = [...newLogs];
                         this.lastUpdate = new Date().toLocaleTimeString();
+                        console.log('Logs updated. Total in state:', this.logs.length);
 
                         setTimeout(() => {
-                            this.newLogIds.clear();
+                            this.newLogIds = new Set();
                             this.newLogsCount = 0;
                         }, 10000);
                     } catch (e) {
@@ -591,7 +749,7 @@
                 },
 
                 applyFilters() {
-                    this.newLogIds.clear();
+                    this.newLogIds = new Set();
                     this.newLogsCount = 0;
                     this.fetchLogs();
                 },
@@ -602,6 +760,7 @@
                     }
                     this.refreshInterval = setInterval(() => {
                         if (this.autoRefresh && window.currentTab === 'logs') {
+                            console.log('Auto-refreshing logs...');
                             this.fetchLogs();
                         }
                     }, 5000);
@@ -609,15 +768,17 @@
 
                 toggleAutoRefresh() {
                     this.autoRefresh = !this.autoRefresh;
+                    console.log('Auto-refresh toggled:', this.autoRefresh);
                     if (this.autoRefresh) {
                         this.fetchLogs();
                     }
                 },
 
                 filteredLogs() {
-                    return this.logs.filter(l =>
-                        (!this.search || l.raw_log_message.toLowerCase().includes(this.search.toLowerCase()))
+                    const filtered = this.logs.filter(l =>
+                        (!this.search || (l.raw_log_message || '').toLowerCase().includes(this.search.toLowerCase()))
                     );
+                    return filtered;
                 },
 
                 isNewLog(log) {
@@ -625,53 +786,10 @@
                 },
 
                 scrollToTop() {
-                    this.$refs.logsContainer.scrollTop = 0;
+                    if (this.$refs.logsContainer) {
+                        this.$refs.logsContainer.scrollTop = 0;
+                    }
                     this.newLogsCount = 0;
-                },
-
-                selectLog(log) {
-                    this.selectedLog = log;
-                    this.sidebarOpen = true;
-                },
-
-                closeSidebar() {
-                    this.sidebarOpen = false;
-                    setTimeout(() => {
-                        this.selectedLog = null;
-                    }, 300);
-                },
-
-                getSeverityColor(severity) {
-                    switch ((severity || '').toLowerCase()) {
-                        case 'critical':
-                            return 'bg-red-500/20 text-red-300 border-red-400';
-                        case 'high':
-                            return 'bg-orange-500/20 text-orange-300 border-orange-400';
-                        case 'medium':
-                            return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
-                        case 'low':
-                            return 'bg-blue-500/20 text-blue-300 border-blue-400';
-                        case 'info':
-                            return 'bg-cyan-500/20 text-cyan-300 border-cyan-400';
-                        default:
-                            return 'bg-gray-500/20 text-gray-300 border-gray-400';
-                    }
-                },
-
-                getEventTypeColor(eventType) {
-                    switch ((eventType || '').toLowerCase()) {
-                        case 'normal':
-                            return 'bg-green-500/20 text-green-300 border-green-400';
-                        case 'system_error':
-                        case 'error':
-                            return 'bg-red-500/20 text-red-300 border-red-400';
-                        case 'warning':
-                            return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
-                        case 'anomaly':
-                            return 'bg-purple-500/20 text-purple-300 border-purple-400';
-                        default:
-                            return 'bg-blue-500/20 text-blue-300 border-blue-400';
-                    }
                 },
 
                 selectLog(log) {
@@ -768,10 +886,14 @@
                         this.availableHosts = data.hosts || [];
                     } catch (e) {
                         console.error("Failed to fetch hosts stats:", e);
+                        this.error = "Failed to load host statistics";
                     }
                 },
 
                 async fetchRawLogs() {
+                    this.loading = true;
+                    this.error = null;
+
                     try {
                         let url = `${window.apiBaseUrl}/raw-logs/recent?n=${this.n}&x_api_key=-`;
                         if (this.logType) url += `&log_type=${this.logType}`;
@@ -792,6 +914,9 @@
                         this.expandedLog = null;
                     } catch (e) {
                         console.error("Failed to fetch raw logs:", e);
+                        this.error = "Failed to load raw logs";
+                    } finally {
+                        this.loading = false;
                     }
                 },
 
@@ -830,17 +955,212 @@
 
             Alpine.data('analyticsComponent', () => ({
                 stats: {},
+                allTimeStats: {},
+                severityChart: null,
+                logTypeChart: null,
+                timeRange: 24, // Default is 24 hours
+                maxTimeRange: 8760, // 1 year in hours
+
+                init() {
+                    this.fetchStats();
+                    this.fetchAllTimeStats();
+
+                    // Auto-refresh analytics every 30 seconds
+                    setInterval(() => {
+                        this.fetchStats();
+                        this.fetchAllTimeStats();
+                    }, 30000);
+
+                    this.$watch('timeRange', () => {
+                        this.fetchStats();
+                    });
+                },
+
+                async fetchAllTimeStats() {
+                    try {
+                        const res = await fetch(`${window.apiBaseUrl}/statistics?x_api_key=-&hours=${this.maxTimeRange}`);
+                        const data = await res.json();
+                        this.allTimeStats = data || {};
+                    } catch (e) {
+                        console.error("Failed to fetch all-time statistics:", e);
+                    }
+                },
+
                 async fetchStats() {
                     try {
-                        const res = await fetch(`${window.apiBaseUrl}/statistics?x_api_key=-`);
+                        const res = await fetch(`${window.apiBaseUrl}/statistics?x_api_key=-&hours=${this.timeRange}`);
                         const data = await res.json();
                         this.stats = data || {};
+
+                        await this.$nextTick();
+                        this.renderCharts();
                     } catch (e) {
                         console.error("Failed to fetch statistics:", e);
                     }
                 },
-                init() {
-                    this.fetchStats();
+
+                get timeRangeLabel() {
+                    if (this.timeRange == 24) return '24 hours';
+                    if (this.timeRange == 168) return '7 days';
+                    if (this.timeRange == 720) return '30 days';
+                    if (this.timeRange == 8760) return '1 year';
+                    if (this.timeRange < 24) return `${this.timeRange} hours`;
+                    if (this.timeRange < 168) return `${Math.round(this.timeRange / 24)} days`;
+                    if (this.timeRange < 720) return `${Math.round(this.timeRange / 168)} weeks`;
+                    return `${Math.round(this.timeRange / 720)} months`;
+                },
+
+                renderCharts() {
+                    this.renderSeverityChart();
+                    this.renderLogTypeChart();
+                },
+
+                renderSeverityChart() {
+                    const ctx = this.$refs.severityChart;
+                    if (!ctx) return;
+
+                    if (this.severityChart) {
+                        this.severityChart.destroy();
+                    }
+
+                    const severityData = this.stats.by_severity || {};
+                    const labels = Object.keys(severityData);
+                    const data = Object.values(severityData);
+
+                    const colors = {
+                        'CRITICAL': '#dc2626',
+                        'HIGH': '#ea580c',
+                        'MEDIUM': '#ca8a04',
+                        'LOW': '#2563eb',
+                        'INFO': '#0891b2'
+                    };
+
+                    const backgroundColors = labels.map(label => colors[label] || '#6b7280');
+
+                    this.severityChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Incidents',
+                                data: data,
+                                backgroundColor: backgroundColors,
+                                borderColor: backgroundColors.map(c => c + 'CC'),
+                                borderWidth: 2,
+                                borderRadius: 8,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                    padding: 12,
+                                    titleColor: '#fff',
+                                    bodyColor: '#fff',
+                                    borderColor: '#22d3ee',
+                                    borderWidth: 1
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.1)'
+                                    },
+                                    ticks: {
+                                        color: '#fff'
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false
+                                    },
+                                    ticks: {
+                                        color: '#fff'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+
+                renderLogTypeChart() {
+                    const ctx = this.$refs.logTypeChart;
+                    if (!ctx) return;
+
+                    if (this.logTypeChart) {
+                        this.logTypeChart.destroy();
+                    }
+
+                    const logTypeData = this.stats.by_log_type || {};
+                    const labels = Object.keys(logTypeData);
+                    const data = Object.values(logTypeData);
+
+                    const colors = ['#22d3ee', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b'];
+
+                    this.logTypeChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+                            datasets: [{
+                                data: data,
+                                backgroundColor: colors,
+                                borderColor: '#1e293b',
+                                borderWidth: 3,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        color: '#fff',
+                                        padding: 15,
+                                        font: {
+                                            size: 12
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                    padding: 12,
+                                    titleColor: '#fff',
+                                    bodyColor: '#fff',
+                                    borderColor: '#22d3ee',
+                                    borderWidth: 1
+                                }
+                            }
+                        }
+                    });
+                },
+
+                getSeverityBgClass(severity) {
+                    const classes = {
+                        'CRITICAL': 'bg-red-500/10 border border-red-400/20',
+                        'HIGH': 'bg-orange-500/10 border border-orange-400/20',
+                        'MEDIUM': 'bg-yellow-500/10 border border-yellow-400/20',
+                        'LOW': 'bg-blue-500/10 border border-blue-400/20',
+                        'INFO': 'bg-cyan-500/10 border border-cyan-400/20'
+                    };
+                    return classes[severity] || 'bg-gray-500/10 border border-gray-400/20';
+                },
+
+                getSeverityIcon(severity) {
+                    const icons = {
+                        'CRITICAL': 'ph ph-warning-octagon text-red-400',
+                        'HIGH': 'ph ph-warning-circle text-orange-400',
+                        'MEDIUM': 'ph ph-warning text-yellow-400',
+                        'LOW': 'ph ph-info text-blue-400',
+                        'INFO': 'ph ph-info-circle text-cyan-400'
+                    };
+                    return icons[severity] || 'ph ph-circle text-gray-400';
                 }
             }));
         });
