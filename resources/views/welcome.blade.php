@@ -678,7 +678,6 @@
 
         <!-- ANOMALY ANALYTICS TAB -->
         <section x-show="tab==='anomaly-analytics'" class="space-y-6" x-data="anomalyAnalyticsComponent()">
-            <!-- Time Range & Sort Controls -->
             <div class="bg-white/5 p-4 rounded-xl border border-white/10">
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div class="flex items-center space-x-4">
@@ -715,7 +714,6 @@
                 </div>
             </div>
 
-            <!-- Stats Cards -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div
                     class="bg-gradient-to-br from-red-500/20 to-red-600/10 p-6 rounded-xl border border-red-400/30 shadow-lg">
@@ -758,7 +756,6 @@
                 </div>
             </div>
 
-            <!-- Sort and Filter Controls -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <span class="text-white font-semibold">Sort by:</span>
@@ -792,7 +789,6 @@
                 </div>
             </div>
 
-            <!-- Anomalies List -->
             <div class="bg-white/5 backdrop-blur-lg rounded-xl shadow-xl p-6 border border-white/10">
                 <h3 class="text-xl font-bold mb-4 flex items-center">
                     <i class="ph ph-warning-diamond text-red-400 mr-2"></i>
@@ -800,13 +796,11 @@
                     <span class="text-sm text-white/50 ml-3" x-text="`(${sortedAnomalies.length} total)`"></span>
                 </h3>
 
-                <!-- Loading State -->
                 <div x-show="loading" class="text-center text-white/50 py-12">
                     <i class="ph ph-spinner text-5xl mb-3 animate-spin"></i>
                     <p class="text-lg">Loading anomalies...</p>
                 </div>
 
-                <!-- Anomalies Table -->
                 <div x-show="!loading" class="overflow-x-auto">
                     <table class="w-full">
                         <thead>
@@ -867,7 +861,6 @@
                         </tbody>
                     </table>
 
-                    <!-- No Anomalies State -->
                     <div x-show="sortedAnomalies.length === 0 && !loading" class="text-center text-white/50 py-12">
                         <i class="ph ph-check-circle text-5xl mb-3 text-green-400"></i>
                         <p class="text-lg">No anomalies detected in the selected time range</p>
@@ -876,7 +869,6 @@
                 </div>
             </div>
 
-            <!-- NEW: Template Distribution Chart -->
             <div class="bg-white/5 backdrop-blur-lg rounded-xl shadow-xl p-6 border border-white/10">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold flex items-center">
@@ -945,7 +937,6 @@
                 </div>
             </div>
 
-            <!-- Sidebar for anomaly details (reuse from incident logs) -->
             <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300"
                 x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
                 x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0"
@@ -965,7 +956,6 @@
 
                     <template x-if="selectedAnomaly">
                         <div class="space-y-6">
-                            <!-- Same structure as incident logs sidebar, but with selectedAnomaly -->
                             <div class="bg-white/5 rounded-lg p-4 border border-white/10">
                                 <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">Basic
                                     Information</h3>
@@ -1410,7 +1400,6 @@
                 init() {
                     this.fetchTemplates();
 
-                    // Watch for time range changes
                     this.$watch('hours', () => {
                         this.fetchTemplates();
                     });
@@ -1468,12 +1457,10 @@
                             return;
                         }
 
-                        // Prepare data
                         const labels = this.templates.map(t => this.truncateTemplate(t.template));
                         const counts = this.templates.map(t => t.count);
                         const percentages = this.templates.map(t => t.percentage);
 
-                        // Get colors based on highest severity
                         const colors = this.templates.map(t => this.getTemplateColor(t.severity_distribution));
 
                         this.templateChart = new Chart(ctx, {
@@ -1642,7 +1629,7 @@
                             this.fetchAnomalies();
                             this.fetchTemplates();
                         }
-                    }, 30000);
+                    }, 300000);
                 },
 
                 async fetchAnomalies() {
@@ -1713,7 +1700,6 @@
                             this.templateChart = null;
                         }
 
-                        // Filter templates based on selected severity
                         let filteredTemplates = [...this.templates];
 
                         if (this.chartFilter !== 'all') {
@@ -1722,7 +1708,6 @@
                             );
                         }
 
-                        // Take top N templates
                         filteredTemplates = filteredTemplates.slice(0, parseInt(this.chartTopN));
 
                         if (filteredTemplates.length === 0) {
@@ -1730,7 +1715,6 @@
                             return;
                         }
 
-                        // Prepare chart data
                         const labels = filteredTemplates.map(t => this.truncateTemplate(t.template, 60));
                         const counts = filteredTemplates.map(t => t.count);
                         const colors = filteredTemplates.map(t => this.getTemplateDominantColor(t.severity_distribution));
@@ -1860,8 +1844,6 @@
                     if (template.length <= maxLength) return template;
                     return template.substring(0, maxLength - 3) + '...';
                 },
-
-                // ... keep all other existing methods (sortAnomalies, toggleSortOrder, etc.) ...
 
                 sortAnomalies() {
                     let sorted = [...this.anomalies];
