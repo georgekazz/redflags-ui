@@ -248,6 +248,33 @@
                                             :class="getSeverityColor(selectedLog.severity)"
                                             x-text="selectedLog.severity"></span>
                                     </div>
+
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Is Anomaly:</span>
+                                        <span class="px-3 py-1 text-sm rounded border"
+                                            :class="selectedLog.is_anomaly ? 'bg-red-500/20 text-red-300 border-red-400' : 'bg-green-500/20 text-green-300 border-green-400'">
+                                            <i :class="selectedLog.is_anomaly ? 'ph ph-warning-diamond' : 'ph ph-check-circle'"
+                                                class="mr-1"></i>
+                                            <span x-text="selectedLog.is_anomaly ? 'Yes' : 'No'"></span>
+                                        </span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Confidence:</span>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="px-3 py-1 text-sm rounded border"
+                                                :class="getConfidenceColor(selectedLog.analysis_result?.confidence)">
+                                                <span
+                                                    x-text="selectedLog.analysis_result?.confidence ? (selectedLog.analysis_result.confidence * 100).toFixed(1) + '%' : 'N/A'"></span>
+                                            </span>
+                                            <div class="w-24 bg-white/10 rounded-full h-2">
+                                                <div class="h-2 rounded-full transition-all duration-500"
+                                                    :class="getConfidenceBarColor(selectedLog.analysis_result?.confidence)"
+                                                    :style="`width: ${(selectedLog.analysis_result?.confidence || 0) * 100}%`">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -702,6 +729,26 @@
                             }
                         };
                     });
+                },
+
+                getConfidenceColor(confidence) {
+                    if (!confidence) return 'bg-gray-500/20 text-gray-300 border-gray-400';
+
+                    const conf = confidence * 100;
+                    if (conf >= 90) return 'bg-green-500/20 text-green-300 border-green-400';
+                    if (conf >= 75) return 'bg-blue-500/20 text-blue-300 border-blue-400';
+                    if (conf >= 50) return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
+                    return 'bg-orange-500/20 text-orange-300 border-orange-400';
+                },
+
+                getConfidenceBarColor(confidence) {
+                    if (!confidence) return 'bg-gray-500';
+
+                    const conf = confidence * 100;
+                    if (conf >= 90) return 'bg-green-500';
+                    if (conf >= 75) return 'bg-blue-500';
+                    if (conf >= 50) return 'bg-yellow-500';
+                    return 'bg-orange-500';
                 },
 
                 async fetchLogs() {
